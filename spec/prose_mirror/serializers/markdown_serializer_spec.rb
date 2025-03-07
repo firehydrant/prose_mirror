@@ -654,6 +654,42 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
       end
     end
 
+    context "with text_style mark type" do
+      it "handles text_style marks without adding any formatting" do
+        doc_with_text_style = <<~JSON
+          {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Text with ",
+                    "marks": []
+                  },
+                  {
+                    "type": "text",
+                    "text": "text style",
+                    "marks": [{ "type": "text_style", "attrs": { "color": "red" } }]
+                  },
+                  {
+                    "type": "text",
+                    "text": " formatting"
+                  }
+                ]
+              }
+            ]
+          }
+        JSON
+
+        document = ProseMirror::Converter.from_json(doc_with_text_style)
+        markdown = serializer.serialize(document)
+        expected = "Text with text style formatting"
+        expect(markdown).to eq(expected)
+      end
+    end
+
     context "with blockquote containing a list" do
       it "correctly nests the list inside the blockquote" do
         document = ProseMirror::Converter.from_json(blockquote_with_list_document)

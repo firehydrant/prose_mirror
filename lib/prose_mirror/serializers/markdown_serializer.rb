@@ -221,6 +221,13 @@ module ProseMirror
           expel_enclosing_whitespace: true
         },
 
+        text_style: {
+          open: "",
+          close: "",
+          mixable: true,
+          expel_enclosing_whitespace: false
+        },
+
         strong: {
           open: "**",
           close: "**",
