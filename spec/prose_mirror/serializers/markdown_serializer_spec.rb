@@ -617,18 +617,17 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
         document = ProseMirror::Converter.from_json(blockquote_with_list_document)
         markdown = serializer.serialize(document)
 
-        expected_lines = [
+        # The proper format for lists inside blockquotes
+        expected = [
           "> A quote with a list:",
           ">",
-          ">   * First item",
-          ">",
-          ">   * Second item",
-          ">"
+          "> * First item",
+          "> * Second item"
         ]
 
-        # Compare line by line, ignoring trailing whitespace
-        actual_lines = markdown.split("\n").map(&:rstrip)
-        expected_lines.each_with_index do |expected_line, i|
+        # Compare line by line with exact matching
+        actual_lines = markdown.split("\n")
+        expected.each_with_index do |expected_line, i|
           expect(actual_lines[i]).to eq(expected_line)
         end
 
@@ -664,14 +663,13 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
         # The improved format with proper indentation and spacing
         expected_lines = [
           "* Level 1 item",
-          "",
-          "    1.             Level 2 ordered item 1",
-          "    2.             Level 2 ordered item 2",
-          "*     Another level 1 item"
+          "    1. Level 2 ordered item 1",
+          "    2. Level 2 ordered item 2",
+          "* Another level 1 item"
         ]
 
-        # Compare line by line, ignoring trailing whitespace
-        actual_lines = markdown.split("\n").map(&:rstrip)
+        # Compare line by line with exact matching (no rstrip)
+        actual_lines = markdown.split("\n")
         expected_lines.each_with_index do |expected_line, i|
           expect(actual_lines[i]).to eq(expected_line)
         end
@@ -689,16 +687,15 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
         document = ProseMirror::Converter.from_json(deeply_nested_lists_document)
         markdown = serializer.serialize(document)
 
-        # Check for key elements in the output
+        # Check for key elements in the output with proper spacing
         expected_lines = [
           "1. Top level ordered item",
-          "",
-          "    *             Nested bullet item",
-          "        1.                     Deeply nested ordered item"
+          "    * Nested bullet item",
+          "    1. Deeply nested ordered item"
         ]
 
-        # Compare line by line, ignoring trailing whitespace
-        actual_lines = markdown.split("\n").map(&:rstrip)
+        # Compare line by line with exact matching (no rstrip)
+        actual_lines = markdown.split("\n")
         expected_lines.each_with_index do |expected_line, i|
           expect(actual_lines[i]).to eq(expected_line)
         end

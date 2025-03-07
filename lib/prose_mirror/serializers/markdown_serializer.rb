@@ -10,7 +10,15 @@ module ProseMirror
       # Default serializers for various node types
       DEFAULT_NODE_SERIALIZERS = {
         blockquote: ->(state, node, parent = nil, index = nil) {
+          # Track that we're in a blockquote to handle lists within blockquotes properly
+          old_in_blockquote = state.instance_variable_get(:@in_blockquote) || false
+          state.instance_variable_set(:@in_blockquote, true)
+
+          # Use the standard blockquote prefix for all content
           state.wrap_block("> ", nil, node) { state.render_content(node) }
+
+          # Restore the blockquote state
+          state.instance_variable_set(:@in_blockquote, old_in_blockquote)
         },
 
         code_block: ->(state, node, parent = nil, index = nil) {
@@ -38,15 +46,33 @@ module ProseMirror
         },
 
         bullet_list: ->(state, node, parent = nil, index = nil) {
-          # Use 2 spaces for indentation for nested lists
-          state.render_list(node, "  ", ->(_) { "* " })
+          # Special handling for lists inside blockquotes
+          if state.instance_variable_get(:@in_blockquote)
+            # For lists in blockquotes, add the blockquote prefix to each line
+            # Each list item should start with "> * "
+            state.render_list(node, "", ->(_) { "* " }, true)
+          else
+            # Standard list rendering
+            state.render_list(node, "  ", ->(_) { "* " })
+          end
         },
 
         ordered_list: ->(state, node, parent = nil, index = nil) {
           start = node.attrs[:order] || 1
-          state.render_list(node, "  ", ->(i) {
-            "#{start + i}. "
-          })
+
+          # Special handling for ordered lists inside blockquotes
+          if state.instance_variable_get(:@in_blockquote)
+            # For lists in blockquotes, add the blockquote prefix to each line
+            # Each list item should start with "> 1. " etc.
+            state.render_list(node, "", ->(i) {
+              "#{start + i}. "
+            }, true)
+          else
+            # Standard ordered list rendering
+            state.render_list(node, "  ", ->(i) {
+              "#{start + i}. "
+            })
+          end
         },
 
         list_item: ->(state, node, parent = nil, index = nil) {
@@ -54,16 +80,52 @@ module ProseMirror
           old_in_list_item = state.instance_variable_get(:@in_list_item) || false
           state.instance_variable_set(:@in_list_item, true)
 
-          # Process the list item content
-          state.render_content(node)
+          # Special handling for list items in blockquotes
+          if state.instance_variable_get(:@in_blockquote)
+            # Process the list item content with special handling
+            node.each_with_index do |child, i|
+              if child.type.name == "paragraph"
+                # Render paragraph content directly
+                state.render_inline(child)
+              else
+                # Render other content normally
+                state.render(child, node, i)
+              end
+            end
+          else
+            # Process the list item content normally
+            state.render_content(node)
+          end
 
           # Restore the previous state
           state.instance_variable_set(:@in_list_item, old_in_list_item)
         },
 
         paragraph: ->(state, node, parent = nil, index = nil) {
-          state.render_inline(node)
-          state.close_block(node)
+          # Special handling for paragraphs inside list items to avoid extra whitespace
+          if state.instance_variable_get(:@in_list_item)
+            # Create a clean paragraph renderer for list items
+            old_at_block_start = state.instance_variable_get(:@at_block_start)
+
+            # Render the paragraph content directly with minimal whitespace
+            state.render_inline(node)
+
+            # Restore state
+            state.instance_variable_set(:@at_block_start, old_at_block_start)
+          elsif state.instance_variable_get(:@in_blockquote) && parent&.type&.name == "bullet_list"
+            # Special handling for paragraphs in bullet lists inside blockquotes
+            old_at_block_start = state.instance_variable_get(:@at_block_start)
+
+            # Render with blockquote prefix
+            state.render_inline(node)
+
+            # Restore state
+            state.instance_variable_set(:@at_block_start, old_at_block_start)
+          else
+            # Normal paragraph rendering for non-list items
+            state.render_inline(node)
+            state.close_block(node)
+          end
         },
 
         image: ->(state, node, parent = nil, index = nil) {
@@ -179,7 +241,7 @@ module ProseMirror
 
     # This class is used to track state and expose methods related to markdown serialization
     class MarkdownSerializerState
-      attr_accessor :delim, :out, :closed, :in_autolink, :at_block_start, :in_tight_list
+      attr_accessor :delim, :out, :closed, :in_autolink, :at_block_start, :in_tight_list, :in_blockquote
       attr_reader :nodes, :marks, :options
 
       # Initialize a new state object
@@ -193,6 +255,7 @@ module ProseMirror
         @in_autolink = nil
         @at_block_start = false
         @in_tight_list = false
+        @in_blockquote = false
 
         @options[:tight_lists] = false if @options[:tight_lists].nil?
         @options[:hard_break_node_name] = "hard_break" if @options[:hard_break_node_name].nil?
@@ -433,8 +496,8 @@ module ProseMirror
       end
 
       # Render a list
-      def render_list(node, indent, marker_gen)
-        # Clear any closed block if it's the same type as this list
+      def render_list(node, indent, marker_gen, in_blockquote = false)
+        # Clear any closed block
         if @closed && @closed.type == node.type
           @closed = nil
         else
@@ -451,25 +514,24 @@ module ProseMirror
 
         # Process each list item
         node.each_with_index do |child, i|
-          # Generate the marker for this item
-          marker = marker_gen.call(i)
-
-          # For nested lists, add proper indentation
-          @delim = if is_nested
-            old_indent + indent
+          # For blockquote lists, add the blockquote prefix
+          @delim = if in_blockquote
+            "> "
+          # For nested lists, add standard indentation
+          elsif is_nested
+            "    "
           else
-            old_indent
+            ""
           end
 
           # Write the marker with proper spacing
-          write(marker)
+          write(marker_gen.call(i))
 
-          # For all content within this list item, add proper indentation
-          # 2 spaces indentation after the marker
+          # Store the current position after the marker
           old_delim = @delim
 
-          # Add enough spaces to align content
-          @delim = old_delim + " " * 2
+          # Add exactly one space after the marker for content
+          @delim = old_delim + " "
 
           # Render the item's content
           render(child, node, i)
