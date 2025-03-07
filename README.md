@@ -134,6 +134,18 @@ After checking out the repo, run `bin/setup` to install dependencies. Then, run 
 
 To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
 
+For developers looking to contribute or extend this gem, the test suite includes examples of various complex ProseMirror document structures including:
+
+- Blockquotes with embedded lists
+- Linked images
+- Nested lists (ordered and unordered)
+- Mixed formatting (bold and italic combined)
+- Code blocks with language specification
+- Horizontal rules
+- Tables (pending implementation)
+
+These tests serve as documentation for how different structures are (or should be) handled.
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/firehydrant/prose_mirror.
@@ -141,6 +153,11 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/firehy
 ## Known Issues
 
 - Markdown serialization for lists and code blocks may not produce perfect output in all cases. Contributions to improve this are welcome.
+- Complex document structures like nested lists, linked images, and tables have varying levels of support:
+  - Basic formatting (bold, italic, links) works well
+  - Blockquotes with lists have limited formatting
+  - Nested lists don't maintain proper indentation
+  - Tables are not currently supported
 
 ## License
 
