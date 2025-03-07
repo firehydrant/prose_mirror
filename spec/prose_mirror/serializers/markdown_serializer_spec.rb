@@ -356,11 +356,19 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
       it "correctly nests the list inside the blockquote" do
         document = ProseMirror::Converter.from_json(blockquote_with_list_document)
         markdown = serializer.serialize(document)
-        # The exact output may vary depending on implementation details of the serializer,
-        # but we expect the blockquote to contain the list items correctly
-        expect(markdown).to include("> A quote with a list:")
-        expect(markdown).to include("> * First item")
-        expect(markdown).to include("> * Second item")
+
+        # Current implementation adds extra '*' markers between list items
+        # The expected output documents the current behavior, not the ideal format
+        expected = <<~MARKDOWN
+          > A quote with a list:
+          > *
+          > * First item
+          > *
+          > * Second item
+          > *
+        MARKDOWN
+
+        expect(markdown).to eq(expected)
       end
     end
 
@@ -368,10 +376,15 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
       it "formats the linked image correctly (with escaping)" do
         document = ProseMirror::Converter.from_json(linked_image_document)
         markdown = serializer.serialize(document)
-        expect(markdown).to include("Here is a linked image: ")
-        # Note: The current implementation escapes the square brackets, which is not ideal
-        # but we'll test for the actual behavior for now
-        expect(markdown).to include("[!\\[Example image\\](https://example.com/image.jpg)](https://example.com")
+
+        # The current implementation escapes square brackets, which makes the markdown
+        # not render correctly if pasted into a markdown editor. This documents the
+        # current behavior, even though it's not ideal.
+        expected = <<~MARKDOWN.chomp
+          Here is a linked image: [!\\[Example image\\](https://example.com/image.jpg)](https://example.com "Example Website")
+        MARKDOWN
+
+        expect(markdown).to eq(expected)
       end
     end
 
@@ -379,12 +392,21 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
       it "properly formats nested lists (with current limitations)" do
         document = ProseMirror::Converter.from_json(nested_lists_document)
         markdown = serializer.serialize(document)
-        # Note: The current implementation doesn't properly indent nested lists
-        # We're testing the actual behavior for now, but this should be improved
-        expect(markdown).to include("* Level 1 item")
-        expect(markdown).to include("* 1. Level 2 ordered item 1")
-        expect(markdown).to include("* 2. Level 2 ordered item 2")
-        expect(markdown).to include("* Another level 1 item")
+
+        # Current implementation doesn't properly indent nested lists and adds extra markers
+        # Ideally, the nested list would be indented with spaces instead of prefixed with '*'
+        expected = <<~MARKDOWN
+          * Level 1 item
+          * 1.
+          * 1. Level 2 ordered item 1
+          * 2.
+          * 2. Level 2 ordered item 2
+          * 2.
+          * Another level 1 item
+          *
+        MARKDOWN
+
+        expect(markdown).to eq(expected)
       end
     end
 
@@ -392,11 +414,13 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
       it "applies multiple marks correctly" do
         document = ProseMirror::Converter.from_json(mixed_formatting_document)
         markdown = serializer.serialize(document)
-        expect(markdown).to include("Normal text with")
-        expect(markdown).to include("***bold and italic***")
-        expect(markdown).to include("**just bold**")
-        expect(markdown).to include("*just italic*")
-        expect(markdown).to include("formatting.")
+
+        # The serializer correctly handles multiple marks and combines them as expected
+        expected = <<~MARKDOWN.chomp
+          Normal text with ***bold and italic*** and **just bold** or *just italic* formatting.
+        MARKDOWN
+
+        expect(markdown).to eq(expected)
       end
     end
 
@@ -404,11 +428,17 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
       it "formats code blocks with language specification" do
         document = ProseMirror::Converter.from_json(code_block_document)
         markdown = serializer.serialize(document)
-        expect(markdown).to include("```ruby")
-        expect(markdown).to include("def hello_world")
-        expect(markdown).to include("puts 'Hello, world!'")
-        expect(markdown).to include("end")
-        expect(markdown).to include("```")
+
+        # Code blocks are formatted correctly with language specification and proper indentation
+        expected = <<~MARKDOWN.chomp
+          ```ruby
+          def hello_world
+            puts 'Hello, world!'
+          end
+          ```
+        MARKDOWN
+
+        expect(markdown).to eq(expected)
       end
     end
 
@@ -416,9 +446,16 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
       it "properly formats horizontal rules" do
         document = ProseMirror::Converter.from_json(horizontal_rule_document)
         markdown = serializer.serialize(document)
-        expect(markdown).to include("Text above rule")
-        expect(markdown).to include("---")
-        expect(markdown).to include("Text below rule")
+
+        # Horizontal rules are properly formatted with surrounding blank lines
+        expected = <<~MARKDOWN.chomp
+          Text above rule
+
+          ---
+          Text below rule
+        MARKDOWN
+
+        expect(markdown).to eq(expected)
       end
     end
 
@@ -429,10 +466,16 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
         # This test documents how they would be handled if supported
         pending "Table support not fully implemented"
 
+        # This represents the ideal table format in Markdown
+        # Tables currently throw an error since they're not implemented in the serializer
         markdown = serializer.serialize(document)
-        expect(markdown).to include("| Header 1 | Header 2 |")
-        expect(markdown).to include("| --- | --- |")
-        expect(markdown).to include("| Cell 1 | **Cell 2 with bold** |")
+        expected = <<~MARKDOWN.chomp
+          | Header 1 | Header 2 |
+          | --- | --- |
+          | Cell 1 | **Cell 2 with bold** |
+        MARKDOWN
+
+        expect(markdown).to eq(expected)
       end
     end
   end
