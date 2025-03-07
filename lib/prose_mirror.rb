@@ -1,5 +1,6 @@
 require "json"
 require "ostruct"
+require "active_support/core_ext/string/inflections" # For underscore
 
 # Require all ProseMirror components
 require_relative "prose_mirror/version"

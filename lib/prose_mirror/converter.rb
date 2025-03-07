@@ -15,7 +15,8 @@ module ProseMirror
     # @param node_data [Hash] The node data from JSON
     # @return [Node] The parsed node
     def self.parse_node(node_data)
-      type = node_data["type"]
+      # Convert camelCase node types to snake_case (e.g., "orderedList" -> "ordered_list")
+      type = node_data["type"].underscore
       attrs = parse_attrs(node_data["attrs"] || {})
       marks = parse_marks(node_data["marks"] || [])
 
@@ -35,7 +36,8 @@ module ProseMirror
     def self.parse_attrs(attrs_data)
       result = {}
       attrs_data.each do |key, value|
-        result[key.to_sym] = value
+        # Convert camelCase attr keys to snake_case as well
+        result[key.underscore.to_sym] = value
       end
       result
     end
@@ -45,7 +47,9 @@ module ProseMirror
     # @return [Array<Mark>] Array of Mark objects
     def self.parse_marks(marks_data)
       marks_data.map do |mark_data|
-        Mark.new(mark_data["type"], parse_attrs(mark_data["attrs"] || {}))
+        # Convert camelCase mark types to snake_case
+        mark_type = mark_data["type"].underscore
+        Mark.new(mark_type, parse_attrs(mark_data["attrs"] || {}))
       end
     end
   end
