@@ -146,6 +146,62 @@ module ProseMirror
 
         text: ->(state, node, parent = nil, index = nil) {
           state.text(node.text, !state.in_autolink)
+        },
+
+        # Table serialization support
+        table: ->(state, node, parent = nil, index = nil) {
+          # Track that we're in a table
+          old_in_table = state.instance_variable_get(:@in_table) || false
+          state.instance_variable_set(:@in_table, true)
+
+          # Render table content
+          state.render_content(node)
+
+          # Restore table state
+          state.instance_variable_set(:@in_table, old_in_table)
+
+          # Only add newline if not at the end of the document
+          if parent && index < parent.child_count - 1
+            state.close_block(node)
+          end
+        },
+
+        table_row: ->(state, node, parent = nil, index = nil) {
+          # Write row separator after headers
+          if index == 1 && parent && parent.child(0).content.any? { |cell| cell.type.name == "table_header" }
+            state.write("|")
+            node.content.each do |_|
+              state.write(" --- |")
+            end
+            state.write("\n")
+          end
+
+          # Write row content
+          state.write("|")
+          state.render_content(node)
+
+          # Add newline unless this is the last row
+          if parent && index < parent.child_count - 1
+            state.write("\n")
+          end
+        },
+
+        table_header: ->(state, node, parent = nil, index = nil) {
+          state.write(" ")
+          # Render content with marks
+          node.content.each do |cell_content|
+            state.render_inline(cell_content)
+          end
+          state.write(" |")
+        },
+
+        table_cell: ->(state, node, parent = nil, index = nil) {
+          state.write(" ")
+          # Render content with marks
+          node.content.each do |cell_content|
+            state.render_inline(cell_content)
+          end
+          state.write(" |")
         }
       }
 

@@ -766,15 +766,11 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
     end
 
     context "with tables" do
-      it "should handle table structures (if supported)" do
+      it "should handle table structures" do
         document = ProseMirror::Converter.from_json(table_document)
-        # Tables might not be supported in the current implementation
-        # This test documents how they would be handled if supported
-        pending "Table support not fully implemented"
-
-        # This represents the ideal table format in Markdown
-        # Tables currently throw an error since they're not implemented in the serializer
         markdown = serializer.serialize(document)
+
+        # Tables should be formatted according to standard Markdown table syntax
         expected = <<~MARKDOWN.chomp
           | Header 1 | Header 2 |
           | --- | --- |
@@ -782,6 +778,239 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
         MARKDOWN
 
         expect(markdown).to eq(expected)
+
+        # Print output for debugging
+        puts "\nTable Output:"
+        puts "============="
+        puts markdown
+        puts "============="
+      end
+
+      it "should handle tables with varying column widths" do
+        varying_width_table = <<~JSON
+          {
+            "type": "doc",
+            "content": [
+              {
+                "type": "table",
+                "content": [
+                  {
+                    "type": "table_row",
+                    "content": [
+                      {
+                        "type": "table_header",
+                        "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Short" }] }]
+                      },
+                      {
+                        "type": "table_header",
+                        "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "A much longer header" }] }]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "table_row",
+                    "content": [
+                      {
+                        "type": "table_cell",
+                        "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Data" }] }]
+                      },
+                      {
+                        "type": "table_cell",
+                        "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "More data here" }] }]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        JSON
+
+        document = ProseMirror::Converter.from_json(varying_width_table)
+        markdown = serializer.serialize(document)
+
+        expected = <<~MARKDOWN.chomp
+          | Short | A much longer header |
+          | --- | --- |
+          | Data | More data here |
+        MARKDOWN
+
+        expect(markdown).to eq(expected)
+      end
+
+      it "should handle empty cells" do
+        empty_cells_table = <<~JSON
+          {
+            "type": "doc",
+            "content": [
+              {
+                "type": "table",
+                "content": [
+                  {
+                    "type": "table_row",
+                    "content": [
+                      {
+                        "type": "table_header",
+                        "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Header" }] }]
+                      },
+                      {
+                        "type": "table_header",
+                        "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Empty Next" }] }]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "table_row",
+                    "content": [
+                      {
+                        "type": "table_cell",
+                        "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Content" }] }]
+                      },
+                      {
+                        "type": "table_cell",
+                        "content": [{ "type": "paragraph", "content": [] }]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        JSON
+
+        document = ProseMirror::Converter.from_json(empty_cells_table)
+        markdown = serializer.serialize(document)
+
+        expected = <<~MARKDOWN.chomp
+          | Header | Empty Next |
+          | --- | --- |
+          | Content |  |
+        MARKDOWN
+
+        expect(markdown).to eq(expected)
+      end
+
+      it "should handle tables with formatted text" do
+        formatted_table = <<~JSON
+          {
+            "type": "doc",
+            "content": [
+              {
+                "type": "table",
+                "content": [
+                  {
+                    "type": "table_row",
+                    "content": [
+                      {
+                        "type": "table_header",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Bold Header",
+                                "marks": [{ "type": "strong" }]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "table_header",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Italic Header",
+                                "marks": [{ "type": "em" }]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "table_row",
+                    "content": [
+                      {
+                        "type": "table_cell",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Link to ",
+                                "marks": []
+                              },
+                              {
+                                "type": "text",
+                                "text": "example",
+                                "marks": [
+                                  {
+                                    "type": "link",
+                                    "attrs": {
+                                      "href": "https://example.com",
+                                      "title": "Example Site"
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "table_cell",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Both ",
+                                "marks": []
+                              },
+                              {
+                                "type": "text",
+                                "text": "bold and italic",
+                                "marks": [
+                                  { "type": "strong" },
+                                  { "type": "em" }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        JSON
+
+        document = ProseMirror::Converter.from_json(formatted_table)
+        markdown = serializer.serialize(document)
+
+        expected = <<~MARKDOWN.chomp
+          | **Bold Header** | *Italic Header* |
+          | --- | --- |
+          | Link to [example](https://example.com "Example Site") | Both ***bold and italic*** |
+        MARKDOWN
+
+        expect(markdown).to eq(expected)
+
+        # Print output for debugging
+        puts "\nFormatted Table Output:"
+        puts "======================"
+        puts markdown
+        puts "======================"
       end
     end
 
