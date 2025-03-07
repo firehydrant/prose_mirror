@@ -156,8 +156,12 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/firehy
 - Complex document structures like nested lists, linked images, and tables have varying levels of support:
   - Basic formatting (bold, italic, links) works well
   - Blockquotes with lists have limited formatting
-  - Nested lists don't maintain proper indentation
+  - Nested lists now have improved indentation but still add extra markers
   - Tables are not currently supported
+
+## Recent Improvements
+
+- **Better Nested List Handling**: The library now supports improved indentation for nested lists (e.g., ordered lists inside bullet lists or vice versa), making the generated Markdown more readable.
 
 ## License
 
