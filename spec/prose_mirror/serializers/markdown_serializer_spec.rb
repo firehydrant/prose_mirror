@@ -612,6 +612,48 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
       end
     end
 
+    context "with italic mark type" do
+      it "handles both em and italic marks the same way" do
+        doc_with_italic = <<~JSON
+          {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Text with ",
+                    "marks": []
+                  },
+                  {
+                    "type": "text",
+                    "text": "em mark",
+                    "marks": [{ "type": "em" }]
+                  },
+                  {
+                    "type": "text",
+                    "text": " and ",
+                    "marks": []
+                  },
+                  {
+                    "type": "text",
+                    "text": "italic mark",
+                    "marks": [{ "type": "italic" }]
+                  }
+                ]
+              }
+            ]
+          }
+        JSON
+
+        document = ProseMirror::Converter.from_json(doc_with_italic)
+        markdown = serializer.serialize(document)
+        expected = "Text with *em mark* and *italic mark*"
+        expect(markdown).to eq(expected)
+      end
+    end
+
     context "with blockquote containing a list" do
       it "correctly nests the list inside the blockquote" do
         document = ProseMirror::Converter.from_json(blockquote_with_list_document)

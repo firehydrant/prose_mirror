@@ -214,6 +214,13 @@ module ProseMirror
           expel_enclosing_whitespace: true
         },
 
+        italic: {
+          open: "*",
+          close: "*",
+          mixable: true,
+          expel_enclosing_whitespace: true
+        },
+
         strong: {
           open: "**",
           close: "**",
