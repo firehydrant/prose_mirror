@@ -39,22 +39,26 @@ module ProseMirror
 
         bullet_list: ->(state, node, parent = nil, index = nil) {
           # Use 2 spaces for indentation for nested lists
-          state.render_list(node, "  ", ->(_) { (node.attrs[:bullet] || "*") + " " })
+          state.render_list(node, "  ", ->(_) { "* " })
         },
 
         ordered_list: ->(state, node, parent = nil, index = nil) {
           start = node.attrs[:order] || 1
-          max_w = (start + node.child_count - 1).to_s.length
-          space = state.repeat(" ", max_w + 2)
-
-          state.render_list(node, space, ->(i) {
-            n_str = (start + i).to_s
-            state.repeat(" ", max_w - n_str.length) + n_str + ". "
+          state.render_list(node, "  ", ->(i) {
+            "#{start + i}. "
           })
         },
 
         list_item: ->(state, node, parent = nil, index = nil) {
+          # Track that we're processing a list item to handle nested lists
+          old_in_list_item = state.instance_variable_get(:@in_list_item) || false
+          state.instance_variable_set(:@in_list_item, true)
+
+          # Process the list item content
           state.render_content(node)
+
+          # Restore the previous state
+          state.instance_variable_set(:@in_list_item, old_in_list_item)
         },
 
         paragraph: ->(state, node, parent = nil, index = nil) {
@@ -429,41 +433,63 @@ module ProseMirror
       end
 
       # Render a list
-      def render_list(node, delim, first_delim)
+      def render_list(node, indent, marker_gen)
+        # Clear any closed block if it's the same type as this list
         if @closed && @closed.type == node.type
           @closed = nil
         else
           ensure_new_line
         end
 
-        starting = @delim
+        # Remember current indentation level
+        old_indent = @delim
+        is_nested = !old_indent.empty?
 
-        # Track the parent type to handle nested lists differently
-        parent_type = starting.include?("*") ? "bullet" : "ordered"
+        # Set up tight list handling
+        old_tight = @in_tight_list
+        @in_tight_list = node.attrs[:tight]
 
+        # Process each list item
         node.each_with_index do |child, i|
-          old_tight = @in_tight_list
-          @in_tight_list = node.attrs[:tight]
+          # Generate the marker for this item
+          marker = marker_gen.call(i)
 
-          # For nested lists, use indentation rather than repeating markers
-          item_prefix = first_delim.call(i)
-
-          # If this is a nested list (e.g., ordered list inside bullet list)
-          # use proper indentation instead of repeating the parent marker
-          @delim = if parent_type == "bullet" && node.type.name == "ordered_list"
-            # For ordered lists nested inside bullet lists, use indentation
-            starting + "  " # Indent by 2 spaces
+          # For nested lists, add proper indentation
+          @delim = if is_nested
+            old_indent + indent
           else
-            starting
+            old_indent
           end
 
-          # Add the item marker
-          @delim += item_prefix
+          # Write the marker with proper spacing
+          write(marker)
 
+          # For all content within this list item, add proper indentation
+          # 2 spaces indentation after the marker
+          old_delim = @delim
+
+          # Add enough spaces to align content
+          @delim = old_delim + " " * 2
+
+          # Render the item's content
           render(child, node, i)
-          @in_tight_list = old_tight
+
+          # Restore delimiter for next item
+          @delim = old_delim
+
+          # Add a newline after each list item unless it's the last one
+          unless i == node.child_count - 1
+            ensure_new_line
+          end
         end
 
+        # Restore the tight list setting
+        @in_tight_list = old_tight
+
+        # Restore the original indentation
+        @delim = old_indent
+
+        # Handle spacing between list items and the next content
         size = (@closed && @closed.type.name == "paragraph" && !node.attrs[:tight]) ? 2 : 1
         flush_close(size)
       end
