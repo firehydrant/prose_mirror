@@ -228,6 +228,13 @@ module ProseMirror
           expel_enclosing_whitespace: false
         },
 
+        inline_thread: {
+          open: "",
+          close: "",
+          mixable: true,
+          expel_enclosing_whitespace: false
+        },
+
         strong: {
           open: "**",
           close: "**",
