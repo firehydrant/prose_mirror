@@ -1,7 +1,7 @@
 require_relative "lib/prose_mirror/version"
 
 Gem::Specification.new do |spec|
-  spec.name = "prose_mirror"
+  spec.name = "prose_mirror_ruby"
   spec.version = ProseMirror::VERSION
   spec.authors = ["Robert Ross"]
   spec.email = ["robert@firehydrant.com"]

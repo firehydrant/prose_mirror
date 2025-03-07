@@ -7,7 +7,7 @@ A Ruby library for working with [ProseMirror](https://prosemirror.net/) document
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'prose_mirror'
+gem 'prose_mirror_ruby'
 ```
 
 And then execute:
@@ -19,7 +19,7 @@ $ bundle install
 Or install it yourself as:
 
 ```bash
-$ gem install prose_mirror
+$ gem install prose_mirror_ruby
 ```
 
 ## Features
