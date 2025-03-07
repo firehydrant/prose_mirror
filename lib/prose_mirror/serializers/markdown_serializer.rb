@@ -38,6 +38,7 @@ module ProseMirror
         },
 
         bullet_list: ->(state, node, parent = nil, index = nil) {
+          # Use 2 spaces for indentation for nested lists
           state.render_list(node, "  ", ->(_) { (node.attrs[:bullet] || "*") + " " })
         },
 
@@ -437,10 +438,28 @@ module ProseMirror
 
         starting = @delim
 
+        # Track the parent type to handle nested lists differently
+        parent_type = starting.include?("*") ? "bullet" : "ordered"
+
         node.each_with_index do |child, i|
           old_tight = @in_tight_list
           @in_tight_list = node.attrs[:tight]
-          @delim = starting + first_delim.call(i)
+
+          # For nested lists, use indentation rather than repeating markers
+          item_prefix = first_delim.call(i)
+
+          # If this is a nested list (e.g., ordered list inside bullet list)
+          # use proper indentation instead of repeating the parent marker
+          @delim = if parent_type == "bullet" && node.type.name == "ordered_list"
+            # For ordered lists nested inside bullet lists, use indentation
+            starting + "  " # Indent by 2 spaces
+          else
+            starting
+          end
+
+          # Add the item marker
+          @delim += item_prefix
+
           render(child, node, i)
           @in_tight_list = old_tight
         end

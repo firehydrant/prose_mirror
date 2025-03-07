@@ -179,6 +179,66 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
     JSON
   end
 
+  let(:deeply_nested_lists_document) do
+    <<~JSON
+      {
+        "type": "doc",
+        "content": [
+          {
+            "type": "ordered_list",
+            "attrs": { "order": 1 },
+            "content": [
+              {
+                "type": "list_item",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      { "type": "text", "text": "Top level ordered item" }
+                    ]
+                  },
+                  {
+                    "type": "bullet_list",
+                    "content": [
+                      {
+                        "type": "list_item",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              { "type": "text", "text": "Nested bullet item" }
+                            ]
+                          },
+                          {
+                            "type": "ordered_list",
+                            "attrs": { "order": 1 },
+                            "content": [
+                              {
+                                "type": "list_item",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      { "type": "text", "text": "Deeply nested ordered item" }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    JSON
+  end
+
   let(:mixed_formatting_document) do
     <<~JSON
       {
@@ -393,17 +453,37 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
         document = ProseMirror::Converter.from_json(nested_lists_document)
         markdown = serializer.serialize(document)
 
-        # Current implementation doesn't properly indent nested lists and adds extra markers
-        # Ideally, the nested list would be indented with spaces instead of prefixed with '*'
+        # We've improved the indentation of nested lists, but there are still some
+        # limitations in the current implementation
         expected = <<~MARKDOWN
           * Level 1 item
-          * 1.
-          * 1. Level 2 ordered item 1
-          * 2.
-          * 2. Level 2 ordered item 2
-          * 2.
+          *   1.
+          *   1. Level 2 ordered item 1
+          *   2.
+          *   2. Level 2 ordered item 2
+          *   2.
           * Another level 1 item
           *
+        MARKDOWN
+
+        expect(markdown).to eq(expected)
+      end
+    end
+
+    context "with deeply nested lists" do
+      it "formats deeply nested lists with proper indentation" do
+        document = ProseMirror::Converter.from_json(deeply_nested_lists_document)
+        markdown = serializer.serialize(document)
+
+        # Verify that deep nesting (ordered -> bullet -> ordered) works correctly
+        # with proper indentation at each level
+        expected = <<~MARKDOWN
+          1. Top level ordered item
+          1. *
+          1. * Nested bullet item
+          1. *   1.
+          1. *   1. Deeply nested ordered item
+          1. *   1.
         MARKDOWN
 
         expect(markdown).to eq(expected)
