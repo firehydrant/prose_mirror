@@ -157,11 +157,14 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/firehy
   - Basic formatting (bold, italic, links) works well
   - Blockquotes with lists have limited formatting
   - Nested lists now have improved indentation but still add extra markers
+  - Complex alternating list types (switching between ordered and bullet lists) may produce suboptimal formatting
   - Tables are not currently supported
+- Custom mark types (beyond the standard strong, em, link, code) may not be properly rendered
 
 ## Recent Improvements
 
 - **Better Nested List Handling**: The library now supports improved indentation for nested lists (e.g., ordered lists inside bullet lists or vice versa), making the generated Markdown more readable.
+- **CamelCase Support**: The library now automatically converts camelCase node types (like "orderedList") to snake_case ("ordered_list"), making it compatible with a wider range of ProseMirror documents and schemas.
 
 ## License
 
