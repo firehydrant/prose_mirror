@@ -1123,6 +1123,73 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
         expect(document.content[3].content[1].content[1].type.name).to eq("bullet_list") # Was "bulletList" in JSON
       end
     end
+
+    context "with edge case content that could trigger regex issues" do
+      it "properly escapes numbered list markers at start of lines" do
+        doc_with_edge_case = <<~JSON
+          {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "1. This looks like a numbered list" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "1." }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": ".1 This is not a numbered list" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "Line that ends with a number and period: 1." }
+                ]
+              },
+              {
+                "type": "ordered_list",
+                "attrs": { "order": 1 },
+                "content": [
+                  {
+                    "type": "list_item",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          { "type": "text", "text": "Actual list item" }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        JSON
+
+        document = ProseMirror::Converter.from_json(doc_with_edge_case)
+        markdown = serializer.serialize(document)
+
+        # The serializer should escape the numbered list markers when they're in regular paragraphs
+        # but properly format actual list items
+        expected = "\\. This looks like a numbered list\n\n\n\\.\n.1 This is not a numbered list\nLine that ends with a number and period: 1.\n1.   Actual list item"
+        expect(markdown).to eq(expected)
+      end
+    end
   end
 
   describe ".backticks_for" do

@@ -638,7 +638,7 @@ module ProseMirror
         str = str.gsub(/[`*\\~\[\]_]/) { |m| "\\" + m }
         if start_of_line
           str = str.gsub(/^[#\-*+>]/) { |m| "\\" + m }
-            .gsub(/^(\d+)\./) { |_, d| d + "\\." }
+            .gsub(/^(\d+)\./) { |match, d| d.to_s + "\\." }
         end
         str.gsub("![", "\\![")
       end
