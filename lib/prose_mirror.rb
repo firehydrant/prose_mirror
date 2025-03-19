@@ -26,8 +26,8 @@ module ProseMirror
   # @return [String] The markdown representation
   def self.to_markdown(node, options = {})
     serializer = Serializers::MarkdownSerializer.new(
-      Serializers::MarkdownSerializer::DEFAULT_NODE_SERIALIZERS,
-      Serializers::MarkdownSerializer::DEFAULT_MARK_SERIALIZERS,
+      Serializers::MarkdownSerializer::DEFAULT_NODE_SERIALIZERS.dup,
+      Serializers::MarkdownSerializer::DEFAULT_MARK_SERIALIZERS.dup,
       options
     )
     serializer.serialize(node)
