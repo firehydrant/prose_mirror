@@ -265,8 +265,17 @@ module ProseMirror
           open: ->(_, mark, parent, index) { ProseMirror::Serializers.backticks_for(parent.child(index), -1) },
           close: ->(_, mark, parent, index) { ProseMirror::Serializers.backticks_for(parent.child(index - 1), 1) },
           escape: false
+        },
+
+        strikethrough: {
+          open: "~~",
+          close: "~~",
+          mixable: true,
+          expel_enclosing_whitespace: true
         }
       }
+
+      DEFAULT_MARK_SERIALIZERS.default = BLANK_MARK
 
       # Constructor with node serializers, mark serializers, and options
       # @param nodes [Hash] Node serializer functions
