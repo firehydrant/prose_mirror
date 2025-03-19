@@ -37,6 +37,17 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
     JSON
   end
 
+  let(:heading_with_invalid_level) do
+    <<~JSON
+      {
+        "type": "doc",
+        "content": [
+          { "type": "heading", "attrs": { "level": 7 }, "content": [{ "type": "text", "text": "Invalid level" }] }
+        ]
+      }
+    JSON
+  end
+
   let(:blockquote_with_list_document) do
     <<~JSON
       {
@@ -610,6 +621,13 @@ RSpec.describe ProseMirror::Serializers::MarkdownSerializer do
         expected = "## Example Document\n\n**This is bold text** and *this is italic*."
         expect(markdown).to eq(expected)
       end
+    end
+
+    it "handles heading with invalid level" do
+      document = ProseMirror::Converter.from_json(heading_with_invalid_level)
+      markdown = serializer.serialize(document)
+      expected = "###### Invalid level"
+      expect(markdown).to eq(expected)
     end
 
     context "with italic mark type" do

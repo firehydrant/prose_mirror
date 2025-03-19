@@ -35,7 +35,8 @@ module ProseMirror
         },
 
         heading: ->(state, node, parent = nil, index = nil) {
-          state.write(state.repeat("#", node.attrs[:level]) + " ")
+          level = node.attrs[:level].to_i.clamp(1, 6)
+          state.write(state.repeat("#", level) + " ")
           state.render_inline(node, false)
           state.close_block(node)
         },
@@ -654,7 +655,7 @@ module ProseMirror
 
       # Repeat a string n times
       def repeat(str, n)
-        str * n
+        str * n.to_i
       end
     end
   end
